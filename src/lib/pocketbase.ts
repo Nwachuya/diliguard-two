@@ -21,6 +21,7 @@ pb.autoCancellation(false)
 // ============================================================================
 
 export async function signUp(email: string, password: string, name: string) {
+  // Create user
   const user = await pb.collection('users').create({
     email,
     password,
@@ -31,6 +32,19 @@ export async function signUp(email: string, password: string, name: string) {
   
   // Send verification email
   await pb.collection('users').requestVerification(email)
+  
+  // Generate unique API key for the account
+  const key = `dlg_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+  
+  // Create account record
+  await pb.collection('accounts').create({
+    user: user.id,
+    role: 'user',
+    key: key,
+    account_status: 'active',
+    monthly_usage: 0,
+    last_reset_month: new Date().getMonth(),
+  })
   
   return user
 }
