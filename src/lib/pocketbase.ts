@@ -31,14 +31,17 @@ export async function signUp(email: string, password: string, name: string) {
   })
   
   // Authenticate immediately
-  await pb.collection('users').authWithPassword(email, password)
+  const authData = await pb.collection('users').authWithPassword(email, password)
+  
+  // Wait a bit to ensure auth state is set
+  await new Promise(resolve => setTimeout(resolve, 100))
   
   // Generate API key
   const key = `dlg_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
   
-  // Create account
+  // Create account using the authenticated user's ID
   await pb.collection('accounts').create({
-    user: user.id,
+    user: authData.record.id,
     role: 'user',
     key: key,
     account_status: 'active',
