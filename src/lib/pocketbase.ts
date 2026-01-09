@@ -21,76 +21,39 @@ pb.autoCancellation(false)
 // ============================================================================
 
 export async function signUp(email: string, password: string, name: string) {
-  try {
-    // Create user
-    const user = await pb.collection('users').create({
-      email,
-      password,
-      passwordConfirm: password,
-      name,
-      emailVisibility: true,
-    })
-    
-    // Authenticate immediately after registration
-    const authData = await pb.collection('users').authWithPassword(email, password)
-    
-    // Generate unique API key for the account
-    const key = `dlg_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
-    
-    // Now create account record (user is authenticated)
-    await pb.collection('accounts').create({
-      user: authData.record.id,
-      role: 'user',
-      key: key,
-      account_status: 'active',
-      monthly_usage: 0,
-      last_reset_month: new Date().getMonth(),
-    })
-    
-    // Send verification email (do this last to not block the flow)
-    await pb.collection('users').requestVerification(email)
-    
-    return user
-  } catch (error: any) {
-    console.error('SignUp error:', error)
-    throw error
-  }
+  // Create user
+  const user = await pb.collection('users').create({
+    email,
+    password,
+    passwordConfirm: password,
+    name,
+    emailVisibility: true,
+  })
+  
+  // Authenticate immediately
+  await pb.collection('users').authWithPassword(email, password)
+  
+  // Generate API key
+  const key = `dlg_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+  
+  // Create account
+  await pb.collection('accounts').create({
+    user: user.id,
+    role: 'user',
+    key: key,
+    account_status: 'active',
+    monthly_usage: 0,
+    last_reset_month: new Date().getMonth(),
+  })
+  
+  // Send verification email
+  await pb.collection('users').requestVerification(email)
+  
+  return user
 }
 
 export async function signIn(email: string, password: string) {
   const authData = await pb.collection('users').authWithPassword(email, password)
-  
-  // Check if account exists
-  try {
-    const existingAccount = await pb.collection('accounts').getFirstListItem(`user="${authData.record.id}"`)
-    console.log('Account exists:', existingAccount)
-  } catch (error: any) {
-    // Account doesn't exist, create it
-    if (error.status === 404) {
-      console.log('Creating account for existing user:', authData.record.id)
-      const key = `dlg_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
-      
-      try {
-        const newAccount = await pb.collection('accounts').create({
-          user: authData.record.id,
-          role: 'user',
-          key: key,
-          account_status: 'active',
-          monthly_usage: 0,
-          last_reset_month: new Date().getMonth(),
-        })
-        console.log('Account created successfully:', newAccount)
-      } catch (createError: any) {
-        console.error('Failed to create account:', createError)
-        console.error('Error details:', JSON.stringify(createError, null, 2))
-        throw createError
-      }
-    } else {
-      console.error('Error checking for account:', error)
-      throw error
-    }
-  }
-  
   return authData
 }
 
