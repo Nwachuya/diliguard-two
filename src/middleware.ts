@@ -8,28 +8,33 @@ export function middleware(request: NextRequest) {
   const authCookie = request.cookies.get('pb_auth')
   const isAuthenticated = !!authCookie?.value
   
-  // Public routes that don't require authentication
+  // 1. ROOT PATH REDIRECT
+  // If user is logged in and visits homepage, send to dashboard
+  if (pathname === '/' && isAuthenticated) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // 2. AUTH PAGE REDIRECTS
+  // If user is logged in and visits login/register, send to dashboard
+  const authPages = ['/login', '/register', '/reset-password']
+  if (authPages.some(page => pathname.startsWith(page)) && isAuthenticated) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+  
+  // 3. PROTECTED ROUTES
+  // Define public routes (pages anyone can see)
   const publicRoutes = ['/', '/login', '/register', '/verify-email', '/reset-password', '/privacy', '/terms']
   
-  // Check if the path matches a public route exactly or starts with it (for nested paths like verify-email/token)
-  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
+  // Check if current path is public
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  )
   
-  // Protected routes (all other routes)
-  const isProtectedRoute = !isPublicRoute
-  
-  // 1. PROTECT PRIVATE ROUTES
-  // If trying to access protected route without auth, redirect to login
-  if (isProtectedRoute && !isAuthenticated) {
+  // If route is NOT public (Protected) and user is NOT authenticated -> Login
+  if (!isPublicRoute && !isAuthenticated) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
-  }
-  
-  // 2. PROTECT AUTH ROUTES
-  // If authenticated and trying to access login/register/reset, redirect to dashboard
-  const authOnlyRoutes = ['','/login', '/register', '/reset-password']
-  if (isAuthenticated && authOnlyRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
   
   return NextResponse.next()
@@ -37,6 +42,13 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }

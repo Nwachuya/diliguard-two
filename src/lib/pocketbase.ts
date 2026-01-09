@@ -47,9 +47,22 @@ export async function signIn(email: string, password: string) {
   return authData
 }
 
+
+
 export async function signOut() {
+  // 1. Clear the PocketBase SDK state
   pb.authStore.clear()
+  
+  // 2. FORCE clear the cookie that the Middleware reads
+  document.cookie = "pb_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
 }
+
+
+
+
+
+
+
 
 export async function resetPassword(email: string) {
   await pb.collection('users').requestPasswordReset(email)
