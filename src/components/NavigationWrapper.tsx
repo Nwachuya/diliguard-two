@@ -6,9 +6,10 @@ import pb, { getAccount } from '@/lib/pocketbase'
 import { AccountWithUser } from '@/types'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
+import Footer from './Footer'
 
 export default function NavigationWrapper({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname() // <--- This allows us to check the current URL
+  const pathname = usePathname()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [account, setAccount] = useState<AccountWithUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,6 +44,7 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
   // 3. Must NOT be the Validation page ('/validate')
   const shouldShowSidebar = isLoggedIn && pathname !== '/' && pathname !== '/validate'
 
+  // --- 1. LOGGED IN / DASHBOARD LAYOUT ---
   if (shouldShowSidebar) {
     return (
       <div className="min-h-screen bg-gray-50/30">
@@ -56,14 +58,18 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
     )
   }
 
-  // --- PUBLIC LAYOUT (Navbar) ---
-  // Used for: Home, Login, Register, Validate, or Logged Out users
+  // --- 2. PUBLIC LAYOUT (Navbar + Footer) ---
+  // Used for: Home, Login, Register, Validate, Privacy, Terms
   return (
     <div className="min-h-screen flex flex-col font-sans">
       <Navbar />
-      <main className="flex-1">
+      
+      {/* flex-1 ensures this section takes up all available space, pushing Footer down */}
+      <main className="flex-1 flex flex-col">
         {children}
       </main>
+
+      <Footer />
     </div>
   )
 }
