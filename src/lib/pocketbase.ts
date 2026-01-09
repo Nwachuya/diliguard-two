@@ -282,6 +282,29 @@ export async function getAllAccounts(
   }
 }
 
+
+
+
+// ============================================================================
+// FEEDBACK HELPERS
+// ============================================================================
+
+export async function createFeedback(userId: string, feedbackText: string): Promise<any> {
+  const feedback = await pb.collection('feedback').create({
+    user: userId,
+    feedback: feedbackText,
+    stage: 'new',
+  })
+  return feedback
+}
+
+export async function getFeedbackCount(userId: string): Promise<number> {
+  const result = await pb.collection('feedback').getList(1, 1, {
+    filter: `user="${userId}"`,
+  })
+  return result.totalItems
+}
+
 // ============================================================================
 // EXPORT
 // ============================================================================
