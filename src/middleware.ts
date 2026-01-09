@@ -10,14 +10,14 @@ export function middleware(request: NextRequest) {
   
   // Public routes that don't require authentication
   const publicRoutes = ['/', '/login', '/register', '/verify-email', '/reset-password', '/privacy', '/terms']
-  const isPublicRoute = publicRoutes.includes(pathname)
   
-  // Admin routes
-  const isAdminRoute = pathname.startsWith('/admin')
+  // Check if the path matches a public route exactly or starts with it (for nested paths like verify-email/token)
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
   
   // Protected routes (all other routes)
   const isProtectedRoute = !isPublicRoute
   
+  // 1. PROTECT PRIVATE ROUTES
   // If trying to access protected route without auth, redirect to login
   if (isProtectedRoute && !isAuthenticated) {
     const loginUrl = new URL('/login', request.url)
@@ -25,27 +25,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
   
-  // If authenticated and trying to access login/register, redirect to dashboard
-  if (isAuthenticated && (pathname === '/login' || pathname === '/register')) {
+  // 2. PROTECT AUTH ROUTES
+  // If authenticated and trying to access login/register/reset, redirect to dashboard
+  const authOnlyRoutes = ['','/login', '/register', '/reset-password']
+  if (isAuthenticated && authOnlyRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
-  
-  // For admin routes, we'll handle role checking in the page component
-  // since we need to parse the auth cookie to get user role
-  // The middleware just ensures authentication exists
   
   return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }
