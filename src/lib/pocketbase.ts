@@ -21,7 +21,9 @@ pb.autoCancellation(false)
 // ============================================================================
 
 export async function signUp(email: string, password: string, name: string) {
-  // Create user
+  // 1. Create user
+  // NOTE: The 'accounts' record is now created automatically by the server-side 
+  // pb_hooks/main.pb.js script we added in Coolify.
   const user = await pb.collection('users').create({
     email,
     password,
@@ -30,26 +32,11 @@ export async function signUp(email: string, password: string, name: string) {
     emailVisibility: true,
   })
   
-  // Authenticate immediately
-  const authData = await pb.collection('users').authWithPassword(email, password)
+  // 2. Authenticate immediately
+  // This also acts as a small buffer to ensure the server hook has finished running
+  await pb.collection('users').authWithPassword(email, password)
   
-  // Wait a bit to ensure auth state is set
-  await new Promise(resolve => setTimeout(resolve, 100))
-  
-  // Generate API key
-  const key = `dlg_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
-  
-  // Create account using the authenticated user's ID
-  await pb.collection('accounts').create({
-    user: authData.record.id,
-    role: 'user',
-    key: key,
-    account_status: 'active',
-    monthly_usage: 0,
-    last_reset_month: new Date().getMonth(),
-  })
-  
-  // Send verification email
+  // 3. Send verification email
   await pb.collection('users').requestVerification(email)
   
   return user
@@ -92,6 +79,7 @@ export async function getAccount(userId: string): Promise<AccountWithUser | null
   }
 }
 
+// Kept as a utility, though not used in signUp anymore
 export async function createAccount(userId: string, key: string): Promise<Account> {
   const account = await pb.collection('accounts').create<Account>({
     user: userId,
