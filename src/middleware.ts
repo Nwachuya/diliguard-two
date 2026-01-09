@@ -23,7 +23,7 @@ export function middleware(request: NextRequest) {
   
   // 3. PROTECTED ROUTES
   // Define public routes (pages anyone can see)
-  const publicRoutes = ['/', '/login', '/register', '/verify-email', '/reset-password', '/privacy', '/terms']
+  const publicRoutes = ['/', '/login', '/register', '/validate','/verify-email', '/reset-password', '/privacy', '/terms']
   
   // Check if current path is public
   const isPublicRoute = publicRoutes.some(route => 
