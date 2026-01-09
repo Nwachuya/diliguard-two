@@ -32,8 +32,6 @@ export default function Sidebar({ account }: SidebarProps) {
   // --- LOGOUT LOGIC ---
   const handleSignOut = async () => {
     await signOut()
-    // Force a hard refresh to /login to ensure all states/cookies are wiped cleanly
-    window.location.href = '/login'
   }
 
   const navigation = [

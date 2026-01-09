@@ -22,8 +22,6 @@ pb.autoCancellation(false)
 
 export async function signUp(email: string, password: string, name: string) {
   // 1. Create user
-  // NOTE: The 'accounts' record is now created automatically by the server-side 
-  // pb_hooks/main.pb.js script we added in Coolify.
   const user = await pb.collection('users').create({
     email,
     password,
@@ -32,11 +30,13 @@ export async function signUp(email: string, password: string, name: string) {
     emailVisibility: true,
   })
   
-  // 2. Authenticate immediately
-  // This also acts as a small buffer to ensure the server hook has finished running
+  // 2. Authenticate
   await pb.collection('users').authWithPassword(email, password)
+
+  // 3. CRITICAL: Sync the state to a Cookie so Middleware sees it
+  document.cookie = pb.authStore.exportToCookie({ httpOnly: false })
   
-  // 3. Send verification email
+  // 4. Send verification email
   await pb.collection('users').requestVerification(email)
   
   return user
@@ -44,19 +44,24 @@ export async function signUp(email: string, password: string, name: string) {
 
 export async function signIn(email: string, password: string) {
   const authData = await pb.collection('users').authWithPassword(email, password)
+  
+  // CRITICAL: Sync the state to a Cookie so Middleware sees it
+  document.cookie = pb.authStore.exportToCookie({ httpOnly: false })
+  
   return authData
 }
 
 
-
 export async function signOut() {
-  // 1. Clear the PocketBase SDK state
+  // 1. Clear PocketBase internal state
   pb.authStore.clear()
   
-  // 2. FORCE clear the cookie that the Middleware reads
+  // 2. Clear the cookie (so Middleware knows we are out)
   document.cookie = "pb_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+  
+  // 3. Force hard redirect to the homepage
+  window.location.href = "/"
 }
-
 
 
 

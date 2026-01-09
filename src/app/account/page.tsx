@@ -44,7 +44,6 @@ export default function AccountPage() {
 
   const handleSignOut = async () => {
     await signOut()
-    router.push('/login')
   }
 
   // Safe access to nested user data

@@ -2,115 +2,90 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import pb, { getAccount } from '@/lib/pocketbase'
-import { AccountWithUser } from '@/types'
+import pb from '@/lib/pocketbase'
+import { ShieldCheck, Menu, X } from 'lucide-react'
 
 export default function Navbar() {
-  const pathname = usePathname()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [role, setRole] = useState<'user' | 'admin' | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
-  // Run on mount to check auth status
   useEffect(() => {
-    async function checkAuth() {
-      // Check PocketBase auth store
-      const valid = pb.authStore.isValid
-      const user = pb.authStore.model
-      
-      setIsLoggedIn(valid)
-
-      if (valid && user) {
-        try {
-          // Fetch account to get the role
-          const account = await getAccount(user.id)
-          setRole(account?.role || 'user')
-        } catch (error) {
-          console.error("Failed to load account role", error)
-        }
-      }
-    }
-
-    checkAuth()
+    // Check initial state
+    setIsLoggedIn(pb.authStore.isValid)
     
-    // Subscribe to auth changes (e.g. if user logs out in another tab)
+    // Listen for changes (login/logout)
     return pb.authStore.onChange(() => {
-      checkAuth()
+      setIsLoggedIn(pb.authStore.isValid)
     })
   }, [])
 
-  // Dynamic Logo Destination
-  const logoDestination = isLoggedIn ? '/dashboard' : '/'
-
   return (
-    <nav className="border-b border-gray-200 bg-white p-4 shadow-sm sticky top-0 z-50">
+    <nav className="absolute top-0 w-full z-50 p-6">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
-        {/* Logo */}
-        <div className="text-xl font-bold text-blue-600 hover:text-blue-700 transition">
-          <Link href={logoDestination}>Diliguard</Link>
-        </div>
         
-        {/* Navigation Links */}
-        <div className="flex gap-6 text-sm font-medium text-gray-600 items-center">
-          
+        {/* LOGO SECTION - Matches your screenshot */}
+        <Link href={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2.5 group">
+          {/* Blue Icon Box */}
+          <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm group-hover:bg-blue-700 transition-colors">
+            <ShieldCheck className="h-5 w-5 text-white" strokeWidth={3} />
+          </div>
+          {/* Text */}
+          <span className="text-xl font-extrabold tracking-tight text-gray-900 uppercase group-hover:text-gray-700 transition-colors">
+            Diliguard
+          </span>
+        </Link>
+        
+        {/* Right Side Buttons (Desktop) */}
+        <div className="hidden md:flex gap-4 text-sm font-medium items-center">
           {isLoggedIn ? (
-            /* --- LOGGED IN VIEW --- */
-            <>
-              <NavLink href="/dashboard" active={pathname === '/dashboard'}>
-                Dashboard
-              </NavLink>
-              
-              <NavLink href="/search/new" active={pathname.startsWith('/search')}>
-                Search
-              </NavLink>
-
-              <NavLink href="/billing" active={pathname === '/billing'}>
-                Billing
-              </NavLink>
-
-              <NavLink href="/account" active={pathname === '/account'}>
-                Account
-              </NavLink>
-
-              {role === 'admin' && (
-                <NavLink href="/admin" active={pathname.startsWith('/admin')} className="text-amber-600">
-                  Admin
-                </NavLink>
-              )}
-            </>
+            <Link 
+              href="/dashboard" 
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm"
+            >
+              Go to Dashboard
+            </Link>
           ) : (
-            /* --- LOGGED OUT VIEW --- */
             <>
-              <NavLink href="/" active={pathname === '/'}>
-                Home
-              </NavLink>
-              
-              <NavLink href="/login" active={pathname === '/login'}>
-                Login
-              </NavLink>
-              
+              <Link href="/login" className="text-gray-600 hover:text-black font-bold tracking-wide text-xs uppercase">
+                Sign In
+              </Link>
               <Link 
                 href="/register" 
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold tracking-wide text-xs uppercase hover:bg-blue-700 transition shadow-sm"
               >
                 Get Started
               </Link>
             </>
           )}
         </div>
-      </div>
-    </nav>
-  )
-}
 
-// Helper component for cleaner links
-function NavLink({ href, active, children, className = '' }: { href: string, active: boolean, children: React.ReactNode, className?: string }) {
-  return (
-    <Link 
-      href={href} 
-      className={`transition-colors ${active ? 'text-blue-600 font-semibold' : 'hover:text-black'} ${className}`}
-    >
-      {children}
-    </Link>
+        {/* Mobile Menu Button */}
+        <div className="md:hidden">
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-gray-900">
+             {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-lg p-4 md:hidden flex flex-col gap-4">
+           {isLoggedIn ? (
+              <Link href="/dashboard" className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-bold">
+                Dashboard
+              </Link>
+           ) : (
+             <>
+               <Link href="/login" className="block w-full text-center py-3 font-bold text-gray-600">
+                 Sign In
+               </Link>
+               <Link href="/register" className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-bold">
+                 Get Started
+               </Link>
+             </>
+           )}
+        </div>
+      )}
+    </nav>
   )
 }

@@ -82,7 +82,7 @@ export default function Home() {
         {/* Using a placeholder from Unsplash that matches the vibe. You can replace this URL. */}
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-80 mix-blend-multiply"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1558494949-efc535b5c47c?q=80&w=2000&auto=format&fit=crop')` }}
+          style={{ backgroundImage: `url('https://images.pexels.com/photos/10809862/pexels-photo-10809862.jpeg?q=80&w=2000&auto=format&fit=crop')` }}
         />
         
         {/* Gradient Overlay (Fade from white/background to transparent) */}
@@ -120,7 +120,7 @@ export default function Home() {
                 </div>
                 <div>
                   <div className="text-sm font-bold">MARCUS AURELIUS</div>
-                  <div className="text-[10px] font-medium opacity-70 tracking-wider">HEAD OF OPERATIONS, GLOBAL CAPITAL</div>
+                  <div className="text-[10px] font-medium opacity-40 tracking-wider">HEAD OF OPERATIONS, GLOBAL CAPITAL</div>
                 </div>
               </div>
             </div>
