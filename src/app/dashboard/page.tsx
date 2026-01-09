@@ -5,24 +5,31 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import pb, { getAccount, getResearchList } from '@/lib/pocketbase'
 import { AccountWithUser, Research, DashboardStats } from '@/types'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
 export default function DashboardPage() {
   const router = useRouter()
+  
+  // State
   const [loading, setLoading] = useState(true)
+  const [listLoading, setListLoading] = useState(false)
   const [account, setAccount] = useState<AccountWithUser | null>(null)
   const [recentResearch, setRecentResearch] = useState<Research[]>([])
-  
-  // Initialize with safe defaults based on your DashboardStats type
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
   const [stats, setStats] = useState<DashboardStats>({
     totalSearches: 0,
     pendingSearches: 0,
     completedSearches: 0,
     monthlyUsage: 0,
-    usageLimit: 100 // Hardcoded limit for now, or derive from subscription status
+    usageLimit: 100 
   })
 
+  // 1. Initial Load: Auth, Account & Stats
   useEffect(() => {
-    async function loadDashboard() {
+    async function loadAccountAndStats() {
       const user = pb.authStore.model
       if (!user) {
         router.push('/login')
@@ -30,37 +37,52 @@ export default function DashboardPage() {
       }
 
       try {
-        // 1. Fetch Account
         const acc = await getAccount(user.id)
         setAccount(acc)
 
         if (acc) {
-          // 2. Fetch Recent Research (First page, 5 items)
-          // The API helper returns { items, totalItems }
-          const res = await getResearchList(acc.id, 1, 5) 
-          setRecentResearch(res.items)
-
-          // 3. Update Stats
-          // Note: To get exact counts of 'Pending' vs 'Complete' server-side, 
-          // we would need specific filter queries. For this demo, we use totalItems
-          // and the monthly_usage from the account record.
+          // Get total count for stats (fetch minimal data)
+          const res = await getResearchList(acc.id, 1, 1) 
+          
           setStats({
             totalSearches: res.totalItems,
-            pendingSearches: 0, // Would require a separate API call with filter="status='Pending'"
-            completedSearches: res.totalItems, // Assuming most are complete for this view
+            pendingSearches: 0, 
+            completedSearches: res.totalItems,
             monthlyUsage: acc.monthly_usage,
-            usageLimit: acc.subscription_status === 'active' ? 'unlimited' : 5 // Example logic
+            usageLimit: acc.subscription_status === 'active' ? 'unlimited' : 5 
           })
         }
       } catch (error) {
-        console.error("Error loading dashboard:", error)
+        console.error("Error loading account:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    loadDashboard()
+    loadAccountAndStats()
   }, [router])
+
+  // 2. Fetch Research List when Page or Account changes
+  useEffect(() => {
+    async function fetchList() {
+      if (!account) return
+      
+      setListLoading(true)
+      try {
+        const res = await getResearchList(account.id, page, ITEMS_PER_PAGE)
+        setRecentResearch(res.items)
+        setTotalPages(res.totalPages)
+      } catch (error) {
+        console.error("Error fetching list:", error)
+      } finally {
+        setListLoading(false)
+      }
+    }
+
+    if (!loading && account) {
+      fetchList()
+    }
+  }, [page, account, loading])
 
   // Helper for status colors
   const getRiskColor = (level?: string) => {
@@ -73,14 +95,29 @@ export default function DashboardPage() {
     }
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading Dashboard...</div>
+  // Handle Row Click
+  const handleRowClick = (id: string) => {
+    router.push(`/search/${id}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center text-gray-500">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mr-2" />
+        Loading Dashboard...
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back, {account?.expand?.user?.name || 'Investigator'}</p>
+          {/* GREETING THE USER */}
+          <p className="text-gray-500 mt-1 text-lg">
+            Welcome back, <span className="font-semibold text-gray-900">{account?.expand?.user?.name || 'Analyst'}</span>
+          </p>
         </div>
         <Link 
           href="/search/new" 
@@ -119,10 +156,9 @@ export default function DashboardPage() {
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
           <h3 className="font-semibold text-gray-900">Recent Investigations</h3>
-          <Link href="/search/history" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-            View All &rarr;
-          </Link>
+          {listLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
         </div>
+        
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-gray-500 bg-gray-50/50 uppercase text-xs font-semibold tracking-wider">
@@ -132,7 +168,7 @@ export default function DashboardPage() {
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Risk Level</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Action</th>
+                <th className="px-6 py-4 text-right">View</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -144,8 +180,14 @@ export default function DashboardPage() {
                 </tr>
               ) : (
                 recentResearch.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">{item.primary_name}</td>
+                  <tr 
+                    key={item.id} 
+                    onClick={() => handleRowClick(item.id)}
+                    className="group hover:bg-blue-50/50 transition-colors cursor-pointer"
+                  >
+                    <td className="px-6 py-4 font-medium text-gray-900 group-hover:text-blue-700">
+                      {item.primary_name}
+                    </td>
                     <td className="px-6 py-4 text-gray-500">{item.entity_type}</td>
                     <td className="px-6 py-4 text-gray-500">
                       {new Date(item.created).toLocaleDateString()}
@@ -160,10 +202,8 @@ export default function DashboardPage() {
                         {item.status === 'Pending' && <span className="text-blue-600 font-medium animate-pulse">Scanning...</span>}
                         {item.status === 'Error' && <span className="text-red-600 font-medium">Failed</span>}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link href={`/search/${item.id}`} className="text-gray-900 font-medium hover:text-blue-600 hover:underline">
-                        View Report
-                      </Link>
+                    <td className="px-6 py-4 text-right text-gray-400 group-hover:text-blue-600">
+                      &rarr;
                     </td>
                   </tr>
                 ))
@@ -172,6 +212,31 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* PAGINATION CONTROLS (Aligned Left) */}
+      {recentResearch.length > 0 && (
+        <div className="flex items-center justify-start gap-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1 || listLoading}
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="h-4 w-4" /> Previous
+          </button>
+          
+          <span className="text-sm text-gray-600 font-medium">
+            Page {page} of {totalPages}
+          </span>
+          
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages || listLoading}
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
