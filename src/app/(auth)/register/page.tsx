@@ -8,6 +8,7 @@ import {
   ShieldCheck, 
   Mail, 
   Lock, 
+  User, // New Icon
   ArrowRight, 
   ArrowLeft,
   Loader2 
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   
   const [formData, setFormData] = useState({
+    name: '', // Added name
     email: '',
     password: '',
     passwordConfirm: ''
@@ -36,13 +38,10 @@ export default function RegisterPage() {
     }
 
     try {
-      // Derive a temporary name from email since the design doesn't have a name field
-      // You can change this later in settings
-      const derivedName = formData.email.split('@')[0]
+      // Pass the actual name captured from the form
+      await signUp(formData.email, formData.password, formData.name)
       
-      await signUp(formData.email, formData.password, derivedName)
-      
-      // Redirect to dashboard on success
+      // Redirect to success page instead of dashboard
       router.push('/register/success')
     } catch (err: any) {
       console.error(err)
@@ -58,14 +57,14 @@ export default function RegisterPage() {
       {/* LEFT COLUMN: Form */}
       <div className="flex flex-col justify-between px-6 py-8 sm:px-12 lg:px-16 xl:px-24">
         
-        {/* Header / Logo */}
+        {/* Header */}
         <div>
-          <div className="flex items-center gap-2 text-blue-600 mb-16">
+          <Link href="/" className="flex items-center gap-2 text-blue-600 mb-16 w-fit">
             <div className="bg-blue-600 rounded p-1">
               <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold tracking-tight text-gray-900">DILIGUARD</span>
-          </div>
+          </Link>
         </div>
 
         {/* Main Content */}
@@ -83,6 +82,26 @@ export default function RegisterPage() {
                 {error}
               </div>
             )}
+
+            {/* NEW: Name Field */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Identity Name
+              </label>
+              <div className="relative group">
+                <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
+                  <User className="h-5 w-5 text-gray-300 group-focus-within:text-blue-600 transition-colors" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Full Name"
+                  className="w-full h-14 pl-12 pr-4 bg-gray-50 border-none rounded-lg text-sm font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-blue-600 transition-all"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                />
+              </div>
+            </div>
 
             {/* Email Field */}
             <div className="space-y-2">
@@ -186,7 +205,6 @@ export default function RegisterPage() {
 
       {/* RIGHT COLUMN: Visuals */}
       <div className="hidden lg:block relative bg-gray-900 overflow-hidden">
-        {/* Tech Texture Background */}
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-60 mix-blend-screen"
           style={{ 
@@ -194,23 +212,18 @@ export default function RegisterPage() {
             filter: 'grayscale(100%) contrast(120%)'
           }}
         />
-        
-        {/* Gradient Fade Overlay (White to Transparent) - Simulates the image fading out to the left */}
         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/10 to-transparent z-10" />
         
-        {/* Bottom Content Area */}
         <div className="absolute bottom-0 left-0 right-0 p-16 z-20">
           <div className="inline-block px-3 py-1 rounded-full border border-white/30 bg-white/10 backdrop-blur-md text-[10px] font-bold tracking-widest text-white uppercase mb-6">
             Onboarding Protocol
           </div>
-          
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter text-white max-w-xl leading-tight">
             JOIN THE ELITE NETWORK OF <br/>
             RISK INTELLIGENCE ANALYSTS.
           </h2>
         </div>
       </div>
-
     </div>
   )
 }
