@@ -42,7 +42,7 @@ export default function RegisterPage() {
       await signUp(formData.email, formData.password, formData.name)
       
       // Redirect to success page instead of dashboard
-      router.push('/register/success')
+      router.push('/validate')
     } catch (err: any) {
       console.error(err)
       setError(err.message || 'Onboarding failed. Please try again.')
@@ -227,3 +227,4 @@ export default function RegisterPage() {
     </div>
   )
 }
+
