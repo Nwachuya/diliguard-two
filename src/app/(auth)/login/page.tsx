@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from '@/lib/pocketbase'
 import { 
-  ShieldCheck, 
   Mail, 
   Lock, 
   ArrowRight, 
@@ -32,7 +31,6 @@ export default function LoginPage() {
       await signIn(formData.email, formData.password)
       router.push('/dashboard')
     } catch (err: any) {
-      // PocketBase usually returns 400 for bad credentials
       setError('Connection refused: Invalid identity or access protocol.')
     } finally {
       setLoading(false)
@@ -40,22 +38,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full grid lg:grid-cols-2 font-sans bg-white">
+    // CRITICAL CHANGE: Replaced flex-1 with min-h-screen
+    <div className="w-full grid lg:grid-cols-2 min-h-screen">
       
       {/* LEFT COLUMN: Form */}
-      <div className="flex flex-col justify-between px-6 py-8 sm:px-12 lg:px-16 xl:px-24">
+      <div className="flex flex-col justify-center px-6 py-8 sm:px-12 lg:px-16 xl:px-24 pt-40 pb-24">
         
-        {/* Header / Logo */}
-        <div>
-          <Link href="/" className="flex items-center gap-2 text-blue-600 mb-16 w-fit">
-            <div className="bg-blue-600 rounded p-1">
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900">DILIGUARD</span>
-          </Link>
-        </div>
-
-        {/* Main Content */}
         <div className="max-w-md w-full">
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tighter text-gray-900 mb-3 uppercase">
             Initialize <br /> Session
@@ -71,7 +59,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Email Field */}
             <div className="space-y-2">
               <label className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">
                 Identity Endpoint
@@ -91,7 +78,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">
@@ -120,7 +106,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
@@ -135,7 +120,6 @@ export default function LoginPage() {
               )}
             </button>
 
-            {/* Footer Links */}
             <div className="flex items-center justify-between pt-4">
               <div className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
                 No Access Key?{' '}
@@ -148,22 +132,12 @@ export default function LoginPage() {
                 <ArrowLeft className="h-3 w-3" /> Back
               </Link>
             </div>
-
           </form>
         </div>
-
-        {/* Bottom Metadata */}
-        <div className="flex gap-8 mt-12">
-          <span className="text-[10px] font-bold tracking-[0.2em] text-gray-300 uppercase">AES-256</span>
-          <span className="text-[10px] font-bold tracking-[0.2em] text-gray-300 uppercase">Multi-Region</span>
-          <span className="text-[10px] font-bold tracking-[0.2em] text-gray-300 uppercase">Verified</span>
-        </div>
-
       </div>
 
       {/* RIGHT COLUMN: Visuals */}
       <div className="hidden lg:block relative bg-gray-900 overflow-hidden">
-        {/* Background Image - Earth/Space Night */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
@@ -171,25 +145,17 @@ export default function LoginPage() {
             filter: 'grayscale(30%) contrast(110%) brightness(70%)'
           }}
         />
-        
-        {/* Gradient Fade Overlay (White to Transparent) */}
         <div className="absolute inset-0 bg-gradient-to-r from-white via-transparent to-transparent z-10 opacity-100" />
-        
-        {/* Dark Overlay for Text Readability */}
         <div className="absolute inset-0 bg-black/20 z-10" />
-
-        {/* Bottom Content Area */}
         <div className="absolute bottom-0 left-0 right-0 p-16 z-20 flex flex-col items-end text-right">
           <div className="inline-block px-3 py-1 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-[10px] font-bold tracking-widest text-white/80 uppercase mb-6">
             Identity Assurance Matrix
           </div>
-          
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter text-white max-w-xl leading-tight">
             SECURING GLOBAL RISK INTELLIGENCE THROUGH PRECISION HARVESTING.
           </h2>
         </div>
       </div>
-
     </div>
   )
 }
