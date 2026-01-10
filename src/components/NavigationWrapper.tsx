@@ -26,7 +26,7 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
           const acc = await getAccount(user.id)
           setAccount(acc)
         } catch (error) {
-          console.error("Failed to fetch account", error)
+          console.error("Failed to fetch account for role", error)
         }
       }
       setLoading(false)
@@ -38,18 +38,15 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
 
   if (loading) return null
 
-  // --- LOGIC: WHEN TO SHOW SIDEBAR ---
-  // 1. Must be logged in
-  // 2. Must NOT be the Homepage ('/')
-  // 3. Must NOT be the Validation page ('/validate')
   const shouldShowSidebar = isLoggedIn && pathname !== '/' && pathname !== '/validate'
 
-  // --- 1. LOGGED IN / DASHBOARD LAYOUT ---
+  // --- LAYOUT CASE 1: Logged In & In App (Dashboard style) ---
   if (shouldShowSidebar) {
     return (
-      <div className="min-h-screen bg-gray-50/30">
-        <Sidebar account={account} />
-        <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="h-screen bg-gray-50/30 flex overflow-hidden"> 
+        <Sidebar account={account} /> 
+        
+        <div className="flex-1 lg:pl-64 flex flex-col h-full overflow-y-auto"> 
           <main className="flex-1 p-4 sm:p-8">
             {children}
           </main>
@@ -58,14 +55,18 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
     )
   }
 
-  // --- 2. PUBLIC LAYOUT (Navbar + Footer) ---
-  // Used for: Home, Login, Register, Validate, Privacy, Terms
+  // --- LAYOUT CASE 2: Public Pages ---
+  // Using h-screen to lock the height and flex-col to push footer to bottom
   return (
-    <div className="min-h-screen flex flex-col font-sans">
-      <Navbar />
+    <div className="h-screen flex flex-col font-sans overflow-hidden">
+      <Navbar /> 
       
-      {/* flex-1 ensures this section takes up all available space, pushing Footer down */}
-      <main className="flex-1 flex flex-col">
+      {/* 
+          Main takes flex-1 to push Footer down. 
+          overflow-y-auto ensures that if content is long, only this section scrolls, 
+          leaving Navbar and Footer visible.
+      */}
+      <main className="flex-1 flex flex-col overflow-y-auto"> 
         {children}
       </main>
 
