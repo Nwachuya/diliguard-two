@@ -38,17 +38,23 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
 
   if (loading) return null
 
-  const publicPaths = ['/', '/validate', '/login', '/register', '/reset-password', '/privacy', '/terms']
-  const isPublicPage = publicPaths.some(path => pathname === path)
+  const protectedPrefixes = [
+    '/dashboard',
+    '/search',
+    '/account',
+    '/billing',
+    '/feedback',
+    '/admin'
+  ]
   
-  const shouldShowSidebar = isLoggedIn && !isPublicPage
+  const shouldShowSidebar = isLoggedIn && protectedPrefixes.some(prefix => pathname.startsWith(prefix))
 
   if (shouldShowSidebar) {
     return (
       <div className="min-h-screen bg-gray-50/30">
         <Sidebar account={account} />
-        <div className="lg:pl-64 flex flex-col min-h-screen">
-          <main className="flex-1 p-4 sm:p-8">
+        <div className="lg:pl-64">
+          <main className="p-4 sm:p-8">
             {children}
           </main>
         </div>
@@ -56,17 +62,13 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
     )
   }
 
-  // --- CORRECTED PUBLIC LAYOUT ---
+  // --- PUBLIC LAYOUT ---
   return (
-    // This container acts as the positioning context for the absolute Navbar and Footer
-    <div className="relative min-h-screen bg-white">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
-      
-      {/* The main content area where the page itself will render */}
-      <main>
+      <main className="flex-1 flex flex-col">
         {children}
       </main>
-
       <Footer />
     </div>
   )

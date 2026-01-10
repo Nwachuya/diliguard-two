@@ -59,10 +59,8 @@ export default function RegisterPage() {
   }
 
   return (
-    // ADDED flex-1 HERE
     <div className="w-full grid lg:grid-cols-2 flex-1">
       
-      {/* LEFT COLUMN: Form */}
       <div className="flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 pt-40 pb-24">
         
         <div className="max-w-md w-full">
@@ -203,12 +201,11 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Visuals */}
       <div className="hidden lg:block relative bg-gray-900 overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-60 mix-blend-screen"
           style={{ 
-            backgroundImage: `url('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2000&auto=format&fit=crop')`,
+            backgroundImage: `url('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2000&auto-format&fit=crop')`,
             filter: 'grayscale(100%) contrast(120%)'
           }}
         />

@@ -38,10 +38,8 @@ export default function LoginPage() {
   }
 
   return (
-    // CRITICAL CHANGE: Replaced flex-1 with min-h-screen
-    <div className="w-full grid lg:grid-cols-2 min-h-screen">
+    <div className="w-full grid lg:grid-cols-2 flex-1">
       
-      {/* LEFT COLUMN: Form */}
       <div className="flex flex-col justify-center px-6 py-8 sm:px-12 lg:px-16 xl:px-24 pt-40 pb-24">
         
         <div className="max-w-md w-full">
@@ -136,12 +134,11 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Visuals */}
       <div className="hidden lg:block relative bg-gray-900 overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
-            backgroundImage: `url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000&auto=format&fit=crop')`,
+            backgroundImage: `url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000&auto-format&fit=crop')`,
             filter: 'grayscale(30%) contrast(110%) brightness(70%)'
           }}
         />
