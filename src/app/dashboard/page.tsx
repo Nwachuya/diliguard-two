@@ -147,7 +147,7 @@ export default function DashboardPage() {
         />
         <StatCard 
           label="Account Status" 
-          value={account?.account_status || 'Unknown'} 
+          value={account?.plan_name || 'Free'} 
           valueClassName="capitalize"
         />
       </div>
