@@ -25,13 +25,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Initialize PocketBase
-    const pb = new PocketBase(pbUrl)
-    pb.authStore.save(authToken, null)
+    // ----------------------------------------------------------------
+    // Step 1: Verify the user's token to get their user ID
+    // ----------------------------------------------------------------
+    const pbUser = new PocketBase(pbUrl)
+    pbUser.authStore.save(authToken, null)
 
-    // FIX: Verify token and load user data from the database
     try {
-      await pb.collection('users').authRefresh()
+      await pbUser.collection('users').authRefresh()
     } catch (e) {
       return NextResponse.json(
         { error: 'Invalid or expired authentication token' },
@@ -39,21 +40,47 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const user = pb.authStore.model
+    const user = pbUser.authStore.model
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
 
-    // Fetch the account
+    // ----------------------------------------------------------------
+    // Step 2: Use superuser auth to fetch account (sees hidden fields)
+    // ----------------------------------------------------------------
+    const pbAdmin = new PocketBase(pbUrl)
+    
+    if (!process.env.POCKETBASE_ADMIN_EMAIL || !process.env.POCKETBASE_ADMIN_PASSWORD) {
+      return NextResponse.json(
+        { error: 'Server configuration error: missing admin credentials' },
+        { status: 500 }
+      )
+    }
+
+    try {
+      await pbAdmin.collection('_superusers').authWithPassword(
+        process.env.POCKETBASE_ADMIN_EMAIL,
+        process.env.POCKETBASE_ADMIN_PASSWORD
+      )
+    } catch (e) {
+      console.error('PocketBase Admin Auth Failed:', e)
+      return NextResponse.json(
+        { error: 'Database auth failed' },
+        { status: 500 }
+      )
+    }
+
+    // ----------------------------------------------------------------
+    // Step 3: Fetch or create account using admin client
+    // ----------------------------------------------------------------
     let account: AccountWithUser
     try {
-      account = await pb.collection('accounts').getFirstListItem(
+      account = await pbAdmin.collection('accounts').getFirstListItem(
         `user="${user.id}"`
       ) as AccountWithUser
     } catch (e: any) {
-      // If account doesn't exist, create it (fallback logic)
       if (e.status === 404) {
-        account = await pb.collection('accounts').create({
+        account = await pbAdmin.collection('accounts').create({
           user: user.id,
           role: 'user',
           account_status: 'new',
@@ -65,34 +92,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ----------------------------------------------------------------
+    // Step 4: Now stripe_customer_id will be visible
+    // ----------------------------------------------------------------
     let stripeCustomerId = account.stripe_customer_id
 
-    // 1. Create Stripe Customer if one doesn't exist
     if (!stripeCustomerId) {
       console.log('Creating new Stripe customer for user:', user.email)
       
       const newCustomer = await createCustomer(
         user.email, 
         user.name || undefined,
-        { account_id: account.id } // Metadata
+        { account_id: account.id }
       )
 
       stripeCustomerId = newCustomer.id
 
-      // Update PocketBase with the new customer ID
-      await pb.collection('accounts').update(account.id, {
+      // Update using admin client
+      await pbAdmin.collection('accounts').update(account.id, {
         stripe_customer_id: stripeCustomerId,
       })
+    } else {
+      console.log('Using existing Stripe customer:', stripeCustomerId)
     }
 
-    // 2. Create Checkout Session
+    // ----------------------------------------------------------------
+    // Step 5: Create Checkout Session
+    // ----------------------------------------------------------------
     const successUrl = `${appUrl}/billing`
     
     const session = await createCheckoutSession(
       stripeCustomerId,
       priceId,
       successUrl,
-      account.id // This maps to metadata.account_id in your helper
+      account.id
     )
 
     if (!session.url) {
