@@ -29,9 +29,12 @@ export async function POST(req: NextRequest) {
     const pb = new PocketBase(pbUrl)
     pb.authStore.save(authToken, null)
 
-    if (!pb.authStore.isValid) {
+    // FIX: Verify token and load user data from the database
+    try {
+      await pb.collection('users').authRefresh()
+    } catch (e) {
       return NextResponse.json(
-        { error: 'Invalid authentication token' },
+        { error: 'Invalid or expired authentication token' },
         { status: 401 }
       )
     }
@@ -83,8 +86,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Create Checkout Session
-    // Using your existing helper from lib/stripe.ts
-    // Success URL: Redirects to /billing. Your helper appends ?canceled=true for the cancel URL.
     const successUrl = `${appUrl}/billing`
     
     const session = await createCheckoutSession(
@@ -92,7 +93,6 @@ export async function POST(req: NextRequest) {
       priceId,
       successUrl,
       account.id // This maps to metadata.account_id in your helper
-      // trialDays is optional, omitted here as it wasn't in the request
     )
 
     if (!session.url) {
