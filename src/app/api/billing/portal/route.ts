@@ -27,14 +27,16 @@ export async function POST(req: NextRequest) {
     const pb = new PocketBase(pbUrl)
     pb.authStore.save(authToken, null)
 
-    if (!pb.authStore.isValid) {
+    // Refresh to validate token and populate user model
+    try {
+      await pb.collection('users').authRefresh()
+    } catch (e) {
       return NextResponse.json(
-        { error: 'Invalid authentication token' },
+        { error: 'Invalid or expired authentication token' },
         { status: 401 }
       )
     }
 
-    // Get the authenticated user
     const user = pb.authStore.model
     if (!user) {
       return NextResponse.json(
