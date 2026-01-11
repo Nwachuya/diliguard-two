@@ -55,6 +55,8 @@ export default function Sidebar({ account }: SidebarProps) {
     { name: 'Admin Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Searches', href: '/admin/searches', icon: Search },
+    { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+
   ]
 
   const NavLink = ({ item }: { item: any }) => {
