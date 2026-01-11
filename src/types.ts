@@ -32,6 +32,7 @@ export interface Account {
   trial_end_date?: string
   cancel_at_period_end?: string
   last_reset_month?: number
+  plan_name?: string; // The name of the current plan (e.g., "Pro", "Free")
   created: string
   updated: string
 }
@@ -117,6 +118,7 @@ export interface Payment {
   stripe_id: string
   status: string
   timestamp: string
+  hosted_invoice_url?: string
   created: string
   updated: string
 }
@@ -192,4 +194,19 @@ export interface AdminStats {
   activeSubscriptions: number
   monthlySearches: number
   monthlyRevenue: number
+}
+
+
+export interface Plan {
+  id: string; // PocketBase record ID (e.g., "pbc_...")
+  name: string; // e.g., "Free", "Pro", "Business"
+  description: string;
+  price: number; // Price in cents (e.g., 1900 for $19.00)
+  price_id: string; // The Stripe Price ID (e.g., "price_123XYZ")
+  display_price: string; // e.g., "$19/month" or "Free"
+  features: string[]; // Array of strings for features (PocketBase JSON field will be parsed to this)
+  created: string; // ISO date string
+  updated: string; // ISO date string
+  // You might want to add other optional fields here if they become relevant,
+  // like isPopular?: boolean; or trial_period_days?: number; if you add them to the PB collection.
 }
