@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import pb, { getAccount, getPaymentList, signOut } from '@/lib/pocketbase'
+import Link from 'next/link'
+import pb, { getAccount, getPaymentList } from '@/lib/pocketbase'
 import type { AccountWithUser, Payment } from '@/types'
-import { Loader2, Copy, Eye, EyeOff, LogOut } from 'lucide-react'
+import { Loader2, Copy, Eye, EyeOff, ArrowRight } from 'lucide-react'
 
 export default function AccountPage() {
   const router = useRouter()
@@ -27,7 +28,8 @@ export default function AccountPage() {
         setAccount(acc)
         
         if (acc) {
-          const pays = await getPaymentList(acc.id)
+          // Only fetch 3 payments for preview
+          const pays = await getPaymentList(acc.id, 1, 3)
           setPayments(pays.items || [])
         }
       } catch (e) {
@@ -38,10 +40,6 @@ export default function AccountPage() {
     }
     loadData()
   }, [router])
-
-  const handleSignOut = async () => {
-    await signOut()
-  }
 
   const handleCopyKey = () => {
     if (account?.key) {
@@ -54,6 +52,14 @@ export default function AccountPage() {
   // Safe access to nested user data
   const userData = account?.expand?.user
   
+  // Get avatar URL if available
+  const getAvatarUrl = () => {
+    if (userData?.avatar) {
+      return pb.files.getUrl(userData, userData.avatar)
+    }
+    return null
+  }
+
   // Safe helper to get initial
   const getInitial = () => {
     if (userData?.name && userData.name.length > 0) return userData.name[0].toUpperCase()
@@ -66,6 +72,9 @@ export default function AccountPage() {
   const usageLimit = 100 
   const usagePercent = Math.min((usageCount / usageLimit) * 100, 100)
 
+  // Check if user is on the highest plan (Pro)
+  const isPro = account?.plan_name?.toLowerCase() === 'pro'
+
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center text-gray-500">
@@ -75,35 +84,36 @@ export default function AccountPage() {
     )
   }
 
+  const avatarUrl = getAvatarUrl()
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 p-1 sm:p-4">
+    <div className="max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-          <p className="text-gray-500 mt-1">Manage your profile and subscription.</p>
-        </div>
-        <button 
-          onClick={handleSignOut} 
-          className="flex items-center gap-2 text-sm text-red-600 font-medium hover:bg-red-50 px-4 py-2 rounded-lg transition border border-red-100"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+        <p className="text-gray-500 mt-1">Manage your profile and subscription.</p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Left Column: Profile & API */}
-        <div className="space-y-8 md:col-span-2">
+        <div className="space-y-6 md:col-span-2">
           
           {/* Profile Section */}
-          <section className="bg-white p-6 sm:p-8 rounded-xl border border-gray-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 uppercase tracking-wider text-xs">Profile Identity</h2>
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h2 className="text-xs font-semibold text-gray-500 mb-6 uppercase tracking-wider">Profile Identity</h2>
             <div className="flex items-center gap-6">
-              <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-3xl font-bold text-white flex-shrink-0 shadow-lg shadow-blue-600/20">
-                {getInitial()}
-              </div>
+              {avatarUrl ? (
+                <img 
+                  src={avatarUrl} 
+                  alt="Profile" 
+                  className="h-20 w-20 rounded-full object-cover flex-shrink-0 shadow-lg"
+                />
+              ) : (
+                <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-3xl font-bold text-white flex-shrink-0 shadow-lg shadow-blue-600/20">
+                  {getInitial()}
+                </div>
+              )}
               <div className="space-y-1 overflow-hidden">
                 <p className="font-bold text-2xl text-gray-900 truncate">
                   {userData?.name || 'User'}
@@ -121,10 +131,8 @@ export default function AccountPage() {
           </section>
 
           {/* API Key Section */}
-          <section className="bg-white p-6 sm:p-8 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 uppercase tracking-wider text-xs">Developer Access Key</h2>
-            </div>
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h2 className="text-xs font-semibold text-gray-500 mb-4 uppercase tracking-wider">Developer Access Key</h2>
             <p className="text-sm text-gray-500 mb-6">
                 Your unique API key for accessing the Diliguard API programmatically. Do not share this key.
             </p>
@@ -146,10 +154,10 @@ export default function AccountPage() {
                 
                 <button 
                     onClick={handleCopyKey}
-                    className="px-4 bg-gray-900 text-white rounded-lg hover:bg-black transition flex items-center gap-2 text-sm font-medium min-w-[100px] justify-center"
+                    className="px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 text-sm font-medium min-w-[100px] justify-center"
                 >
                     {copied ? (
-                      <span className="text-green-400">Copied!</span>
+                      <span className="text-white">Copied!</span>
                     ) : (
                       <>
                         <Copy className="h-4 w-4" /> Copy
@@ -159,9 +167,17 @@ export default function AccountPage() {
             </div>
           </section>
 
-          {/* Billing History */}
-          <section className="bg-white p-6 sm:p-8 rounded-xl border border-gray-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 uppercase tracking-wider text-xs">Transaction History</h2>
+          {/* Billing History - Max 3 items */}
+          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Transaction History</h2>
+              <Link 
+                href="/billing" 
+                className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition"
+              >
+                View All <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
             {payments.length === 0 ? (
                 <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
                     <p className="text-gray-500 text-sm">No invoices found.</p>
@@ -196,15 +212,17 @@ export default function AccountPage() {
         </div>
 
         {/* Right Column: Subscription Status */}
-        <div className="space-y-8">
-            <section className="bg-[#0B1120] text-white p-8 rounded-xl shadow-xl relative overflow-hidden">
+        <div className="space-y-6">
+            <section className="bg-[#0B1120] text-white p-6 rounded-xl shadow-xl relative overflow-hidden">
                 {/* Decorative background blur */}
                 <div className="absolute top-0 right-0 p-32 bg-blue-600 opacity-10 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none"></div>
                 
                 <h2 className="text-xs font-bold text-blue-200 mb-2 uppercase tracking-widest">Active Plan</h2>
-                <div className="text-3xl font-extrabold mb-6 capitalize tracking-tight">{account?.subscription_status || 'Free Tier'}</div>
+                <div className="text-3xl font-extrabold mb-6 capitalize tracking-tight">
+                  {account?.plan_name || 'Free Tier'}
+                </div>
                 
-                <div className="mb-8">
+                <div className="mb-6">
                     <div className="flex justify-between text-sm mb-2 text-gray-400">
                         <span>Monthly Usage</span>
                         <span className="font-medium text-white">{usageCount} <span className="text-gray-500">/ {usageLimit}</span></span>
@@ -219,18 +237,23 @@ export default function AccountPage() {
                     <p className="text-[10px] text-gray-500 mt-3 font-medium uppercase tracking-wider">Resets next month</p>
                 </div>
 
-                <button className="w-full py-3 bg-white text-black rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition shadow-lg shadow-white/5">
+                {!isPro && (
+                  <Link 
+                    href="/choose-plan"
+                    className="block w-full py-3 bg-white text-black rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition shadow-lg shadow-white/5 text-center"
+                  >
                     Upgrade Plan
-                </button>
+                  </Link>
+                )}
             </section>
             
             {account?.role === 'admin' && (
                 <section className="bg-amber-50 border border-amber-200 p-6 rounded-xl">
                     <h3 className="font-bold text-amber-800 mb-2 text-sm uppercase tracking-wide">Admin Privileges</h3>
                     <p className="text-xs text-amber-700 mb-4">You have elevated permissions on this platform.</p>
-                    <a href="/admin" className="text-xs font-bold text-amber-900 hover:text-amber-700 flex items-center gap-1 uppercase tracking-widest">
+                    <Link href="/admin" className="text-xs font-bold text-amber-900 hover:text-amber-700 flex items-center gap-1 uppercase tracking-widest">
                         Enter Admin Panel &rarr;
-                    </a>
+                    </Link>
                 </section>
             )}
         </div>

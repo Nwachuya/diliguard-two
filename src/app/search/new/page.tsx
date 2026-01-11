@@ -8,18 +8,16 @@ import {
   Search,
   User,
   Building2,
-  Users,
   MapPin,
   Link as LinkIcon,
   Briefcase,
   FileText,
-  UserCheck,
   Loader2,
   AlertCircle,
   Sparkles
 } from 'lucide-react'
 
-type EntityType = 'Individual' | 'Company' | 'Organization'
+type EntityType = 'Individual' | 'Company'
 
 interface FormData {
   primary_name: string
@@ -58,12 +56,10 @@ export default function NewSearchPage() {
     known_aliases: '',
   })
 
-  // Check if user can search
   const canSearch = (status: string | undefined, monthlyUsage: number): boolean => {
     if (status === 'active' || status === 'trialing') {
       return true
     }
-    // Free users get 2 searches per month
     return monthlyUsage < 2
   }
 
@@ -92,9 +88,8 @@ export default function NewSearchPage() {
     loadData()
   }, [router])
 
-  // Poll for research completion
   const pollResearchStatus = async (researchId: string): Promise<boolean> => {
-    const maxAttempts = 60 // 5 minutes max (5 sec intervals)
+    const maxAttempts = 60
     let attempts = 0
 
     while (attempts < maxAttempts) {
@@ -109,7 +104,6 @@ export default function NewSearchPage() {
           throw new Error(research.error_log || 'Research failed')
         }
 
-        // Wait 5 seconds before next poll
         await new Promise(resolve => setTimeout(resolve, 5000))
         attempts++
       } catch (e: any) {
@@ -123,7 +117,6 @@ export default function NewSearchPage() {
     throw new Error('Research timed out')
   }
 
-  // Animate loading stages
   const animateLoadingStages = () => {
     let currentStage = 0
     setProcessingStage(0)
@@ -160,7 +153,6 @@ export default function NewSearchPage() {
     }
 
     try {
-      // Call our API route
       const response = await fetch('/api/research', {
         method: 'POST',
         headers: {
@@ -185,10 +177,7 @@ export default function NewSearchPage() {
         throw new Error(data.error || 'Failed to create search')
       }
 
-      // Poll for completion
       await pollResearchStatus(data.research_id)
-
-      // Redirect to results
       router.push(`/search/${data.research_id}`)
 
     } catch (err: any) {
@@ -211,12 +200,10 @@ export default function NewSearchPage() {
     )
   }
 
-  // Full-screen processing state
   if (submitting) {
     return (
       <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center">
         <div className="max-w-md w-full mx-auto px-6 text-center">
-          {/* Animated Icon */}
           <div className="relative mb-8">
             <div className="w-24 h-24 mx-auto bg-blue-600 rounded-2xl flex items-center justify-center animate-pulse">
               <Sparkles className="h-12 w-12 text-white" />
@@ -224,7 +211,6 @@ export default function NewSearchPage() {
             <div className="absolute inset-0 w-24 h-24 mx-auto border-4 border-blue-400 rounded-2xl animate-ping opacity-20"></div>
           </div>
 
-          {/* Progress Message */}
           <h2 className="text-2xl font-bold text-white mb-2">
             {processingMessage}
           </h2>
@@ -232,7 +218,6 @@ export default function NewSearchPage() {
             Searching for: <span className="text-white font-medium">{formData.primary_name}</span>
           </p>
 
-          {/* Progress Steps */}
           <div className="flex justify-center gap-2 mb-8">
             {LOADING_STAGES.map((_, index) => (
               <div
@@ -244,7 +229,6 @@ export default function NewSearchPage() {
             ))}
           </div>
 
-          {/* Stage Counter */}
           <p className="text-xs text-gray-500 uppercase tracking-widest">
             Stage {processingStage + 1} of {LOADING_STAGES.length}
           </p>
@@ -254,7 +238,7 @@ export default function NewSearchPage() {
   }
 
   return (
-    <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">New Investigation</h1>
@@ -278,138 +262,132 @@ export default function NewSearchPage() {
         </div>
       )}
 
-      {/* Form Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              {error}
-            </div>
-          )}
+      {/* Error */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+          <p className="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )}
 
-          {/* Entity Type Selection */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
-              Entity Type *
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { value: 'Individual', icon: User, label: 'Individual' },
-                { value: 'Company', icon: Building2, label: 'Company' },
-                { value: 'Organization', icon: Users, label: 'Organization' },
-              ].map(({ value, icon: Icon, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => updateField('entity_type', value as EntityType)}
-                  className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
-                    formData.entity_type === value
-                      ? 'border-blue-600 bg-blue-50 text-blue-600'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                  }`}
-                >
-                  <Icon className="h-6 w-6" />
-                  <span className="text-sm font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Entity Type Toggle */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1 inline-flex">
+          <button
+            type="button"
+            onClick={() => updateField('entity_type', 'Individual')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              formData.entity_type === 'Individual'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <User className="h-4 w-4" />
+            Individual
+          </button>
+          <button
+            type="button"
+            onClick={() => updateField('entity_type', 'Company')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              formData.entity_type === 'Company'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            Company
+          </button>
+        </div>
 
-          {/* Primary Name */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
-              {formData.entity_type === 'Individual' ? 'Full Name' : 'Entity Name'} *
+        {/* Main Form Card */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
+          {/* Primary Name - Required */}
+          <div className="p-5">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
+              {formData.entity_type === 'Individual' ? 'Full Name' : 'Company Name'} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
-                <UserCheck className="h-5 w-5 text-gray-300" />
-              </div>
               <input
                 type="text"
                 required
                 maxLength={500}
-                placeholder={formData.entity_type === 'Individual' ? 'John Doe' : 'Acme Corporation'}
-                className="w-full h-12 pl-12 pr-4 bg-gray-50 border-none rounded-lg text-sm font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-blue-600 transition-all"
+                placeholder={formData.entity_type === 'Individual' ? 'e.g. John Smith' : 'e.g. Acme Corporation'}
+                className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 value={formData.primary_name}
                 onChange={(e) => updateField('primary_name', e.target.value)}
               />
             </div>
           </div>
 
-          {/* Location */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
-              Location
-            </label>
-            <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
-                <MapPin className="h-5 w-5 text-gray-300" />
+          {/* Two Column Grid */}
+          <div className="p-5 grid sm:grid-cols-2 gap-5">
+            {/* Location */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                Location
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  maxLength={500}
+                  placeholder="City, Country"
+                  className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  value={formData.location}
+                  onChange={(e) => updateField('location', e.target.value)}
+                />
               </div>
-              <input
-                type="text"
-                maxLength={500}
-                placeholder="City, Country"
-                className="w-full h-12 pl-12 pr-4 bg-gray-50 border-none rounded-lg text-sm font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-blue-600 transition-all"
-                value={formData.location}
-                onChange={(e) => updateField('location', e.target.value)}
-              />
+            </div>
+
+            {/* Industry */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                Industry
+              </label>
+              <div className="relative">
+                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  maxLength={500}
+                  placeholder="e.g. Finance, Technology"
+                  className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  value={formData.industry}
+                  onChange={(e) => updateField('industry', e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
           {/* URL */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
-              Website / LinkedIn URL
+          <div className="p-5">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
+              Website or LinkedIn URL
             </label>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
-                <LinkIcon className="h-5 w-5 text-gray-300" />
-              </div>
+              <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="url"
                 placeholder="https://linkedin.com/in/username"
-                className="w-full h-12 pl-12 pr-4 bg-gray-50 border-none rounded-lg text-sm font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-blue-600 transition-all"
+                className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 value={formData.url}
                 onChange={(e) => updateField('url', e.target.value)}
               />
             </div>
           </div>
 
-          {/* Industry */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
-              Industry / Sector
-            </label>
-            <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
-                <Briefcase className="h-5 w-5 text-gray-300" />
-              </div>
-              <input
-                type="text"
-                maxLength={500}
-                placeholder="Finance, Technology, Healthcare..."
-                className="w-full h-12 pl-12 pr-4 bg-gray-50 border-none rounded-lg text-sm font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-blue-600 transition-all"
-                value={formData.industry}
-                onChange={(e) => updateField('industry', e.target.value)}
-              />
-            </div>
-          </div>
-
           {/* Tax Registration */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
+          <div className="p-5">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
               Tax / Registration Number
             </label>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
-                <FileText className="h-5 w-5 text-gray-300" />
-              </div>
+              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 maxLength={500}
-                placeholder="VAT, EIN, Company Registration..."
-                className="w-full h-12 pl-12 pr-4 bg-gray-50 border-none rounded-lg text-sm font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-blue-600 transition-all"
+                placeholder="VAT, EIN, Company Registration Number"
+                className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 value={formData.tax_reg}
                 onChange={(e) => updateField('tax_reg', e.target.value)}
               />
@@ -417,31 +395,36 @@ export default function NewSearchPage() {
           </div>
 
           {/* Known Aliases */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
-              Known Aliases / Other Names
+          <div className="p-5">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
+              Known Aliases
             </label>
             <textarea
               maxLength={1000}
               rows={2}
               placeholder="Previous names, nicknames, trading names..."
-              className="w-full px-4 py-3 bg-gray-50 border-none rounded-lg text-sm font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-blue-600 transition-all resize-none"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
               value={formData.known_aliases}
               onChange={(e) => updateField('known_aliases', e.target.value)}
             />
           </div>
+        </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={submitting || !formData.primary_name.trim()}
-            className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Search className="h-5 w-5" />
-            Start Investigation
-          </button>
-        </form>
-      </div>
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={submitting || !formData.primary_name.trim()}
+          className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Search className="h-4 w-4" />
+          Start Investigation
+        </button>
+
+        {/* Helper Text */}
+        <p className="text-center text-xs text-gray-400">
+          Investigation typically takes 30-60 seconds to complete.
+        </p>
+      </form>
     </div>
   )
 }
