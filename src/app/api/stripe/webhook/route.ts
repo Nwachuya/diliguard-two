@@ -32,17 +32,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'PocketBase URL missing' }, { status: 500 })
   }
   
-  // Initialize PocketBase (Admin rights needed to find accounts by Stripe ID)
-  const pb = new PocketBase(pbUrl)
-  // Note: For webhooks, you usually need admin access to update any user's account.
-  // If you have an admin email/pass in env, authenticate here. 
-  // Otherwise, ensure your API rules allow these updates or use a superuser client.
-  // Example with admin login (recommended for webhooks):
+const pb = new PocketBase(pbUrl)
+
+  // CRITICAL FIX: Authenticate as Superuser (for PocketBase v0.23+)
   if (process.env.POCKETBASE_ADMIN_EMAIL && process.env.POCKETBASE_ADMIN_PASSWORD) {
-      await pb.admins.authWithPassword(
+    try {
+      
+      await pb.collection('_superusers').authWithPassword(
           process.env.POCKETBASE_ADMIN_EMAIL, 
           process.env.POCKETBASE_ADMIN_PASSWORD
       )
+    } catch (e) {
+      console.error('PocketBase Admin Auth Failed', e)
+      return NextResponse.json({ error: 'Database auth failed' }, { status: 500 })
+    }
   }
 
   try {
