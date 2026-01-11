@@ -26,7 +26,7 @@ export function middleware(request: NextRequest) {
     '/login', 
     '/register', 
     '/validate',
-    '/verify-email', 
+    '/verify', 
     '/reset-password', 
     '/privacy', 
     '/terms',
