@@ -3,22 +3,25 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import pb from '@/lib/pocketbase'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, Menu, X } from 'lucide-react'
 
 export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   useEffect(() => {
     setIsLoggedIn(pb.authStore.isValid)
-    return pb.authStore.onChange(() => setIsLoggedIn(pb.authStore.isValid))
+    
+    return pb.authStore.onChange(() => {
+      setIsLoggedIn(pb.authStore.isValid)
+    })
   }, [])
 
   return (
-    <nav className="absolute top-0 w-full z-50 py-8">
-      {/* MATCHED PADDING: px-6 sm:px-12 lg:px-16 xl:px-24 */}
-      <div className="w-full px-6 sm:px-12 lg:px-16 xl:px-24 flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-50">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         
-        {/* LOGO */}
+        {/* Logo */}
         <Link href={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2.5 group">
           <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm group-hover:bg-blue-700 transition-colors">
             <ShieldCheck className="h-5 w-5 text-white" strokeWidth={3} />
@@ -28,30 +31,73 @@ export default function Navbar() {
           </span>
         </Link>
         
-        {/* Actions */}
-        <div className="flex gap-4 items-center">
+        {/* Desktop Buttons */}
+        <div className="hidden md:flex gap-3 items-center">
           {isLoggedIn ? (
             <Link 
               href="/dashboard" 
-              className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg font-bold hover:brightness-110 transition shadow-sm text-xs uppercase tracking-widest"
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wide hover:bg-blue-700 transition shadow-sm"
             >
-              Dashboard
+              Go to Dashboard
             </Link>
           ) : (
             <>
-              <Link href="/login" className="text-gray-600 hover:text-black font-bold tracking-widest text-[10px] uppercase">
+              <Link 
+                href="/login" 
+                className="bg-white text-gray-700 px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wide border border-gray-200 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition shadow-sm"
+              >
                 Sign In
               </Link>
               <Link 
                 href="/register" 
-                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold tracking-widest text-xs uppercase hover:bg-blue-700 transition shadow-sm"
+                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wide hover:bg-white hover:text-blue-600 border border-blue-600 transition shadow-sm"
               >
                 Get Started
               </Link>
             </>
           )}
         </div>
+
+        {/* Mobile Menu Button */}
+        <button 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
+          className="md:hidden text-gray-900 p-2 hover:bg-gray-100 rounded-lg transition"
+        >
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 flex flex-col gap-3">
+          {isLoggedIn ? (
+            <Link 
+              href="/dashboard" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-bold text-sm"
+            >
+              Go to Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link 
+                href="/login" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="block w-full text-center bg-white text-gray-700 py-3 rounded-lg font-bold text-sm border border-gray-200"
+              >
+                Sign In
+              </Link>
+              <Link 
+                href="/register" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-bold text-sm"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   )
 }

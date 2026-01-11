@@ -21,7 +21,6 @@ pb.autoCancellation(false)
 // ============================================================================
 
 export async function signUp(email: string, password: string, name: string) {
-  // 1. Create user
   const user = await pb.collection('users').create({
     email,
     password,
@@ -30,13 +29,8 @@ export async function signUp(email: string, password: string, name: string) {
     emailVisibility: true,
   })
   
-  // 2. Authenticate
   await pb.collection('users').authWithPassword(email, password)
-
-  // 3. CRITICAL: Sync the state to a Cookie so Middleware sees it
   document.cookie = pb.authStore.exportToCookie({ httpOnly: false })
-  
-  // 4. Send verification email
   await pb.collection('users').requestVerification(email)
   
   return user
@@ -44,30 +38,15 @@ export async function signUp(email: string, password: string, name: string) {
 
 export async function signIn(email: string, password: string) {
   const authData = await pb.collection('users').authWithPassword(email, password)
-  
-  // CRITICAL: Sync the state to a Cookie so Middleware sees it
   document.cookie = pb.authStore.exportToCookie({ httpOnly: false })
-  
   return authData
 }
 
-
 export async function signOut() {
-  // 1. Clear PocketBase internal state
   pb.authStore.clear()
-  
-  // 2. Clear the cookie (so Middleware knows we are out)
   document.cookie = "pb_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
-  
-  // 3. Force hard redirect to the homepage
   window.location.href = "/"
 }
-
-
-
-
-
-
 
 export async function resetPassword(email: string) {
   await pb.collection('users').requestPasswordReset(email)
@@ -97,7 +76,6 @@ export async function getAccount(userId: string): Promise<AccountWithUser | null
   }
 }
 
-// Kept as a utility, though not used in signUp anymore
 export async function createAccount(userId: string, key: string): Promise<Account> {
   const account = await pb.collection('accounts').create<Account>({
     user: userId,
@@ -193,6 +171,11 @@ export async function getAllResearch(
   }
 }
 
+export async function deleteResearch(researchId: string): Promise<boolean> {
+  await pb.collection('research').delete(researchId)
+  return true
+}
+
 // ============================================================================
 // PAYMENT HELPERS
 // ============================================================================
@@ -216,9 +199,11 @@ export async function getPaymentList(
 
 export async function getAllPayments(
   page: number = 1,
-  perPage: number = 10
+  perPage: number = 10,
+  filter?: string
 ): Promise<{ items: PaymentWithAccount[]; totalPages: number; totalItems: number }> {
   const result = await pb.collection('payments').getList<PaymentWithAccount>(page, perPage, {
+    filter: filter || '',
     sort: '-created',
     expand: 'account,account.user',
   })
@@ -268,9 +253,22 @@ export async function getAllUsers(
 
 export async function getAllAccounts(
   page: number = 1,
-  perPage: number = 10
+  perPage: number = 10,
+  filter?: string,
+  search?: string
 ): Promise<{ items: AccountWithUser[]; totalPages: number; totalItems: number }> {
+  let filterParts: string[] = []
+  
+  if (filter) {
+    filterParts.push(filter)
+  }
+  
+  if (search) {
+    filterParts.push(`(user.name~"${search}" || user.email~"${search}")`)
+  }
+  
   const result = await pb.collection('accounts').getList<AccountWithUser>(page, perPage, {
+    filter: filterParts.length > 0 ? filterParts.join(' && ') : '',
     sort: '-created',
     expand: 'user',
   })
@@ -282,8 +280,201 @@ export async function getAllAccounts(
   }
 }
 
+export async function suspendAccount(accountId: string): Promise<Account> {
+  return await updateAccount(accountId, { account_status: 'suspended' })
+}
 
+export async function unsuspendAccount(accountId: string): Promise<Account> {
+  return await updateAccount(accountId, { account_status: 'active' })
+}
 
+// ============================================================================
+// ADMIN STATS HELPERS
+// ============================================================================
+
+export async function getAdminDashboardStats(): Promise<{
+  totalUsers: number
+  activeSubscriptions: number
+  totalRevenue: number
+  totalInvestigations: number
+  newUsersThisMonth: number
+  investigationsThisMonth: number
+  pendingInvestigations: number
+  failedInvestigations: number
+}> {
+  // Get total users
+  const usersResult = await pb.collection('users').getList(1, 1)
+  const totalUsers = usersResult.totalItems
+  
+  // Get active subscriptions
+  const activeSubsResult = await pb.collection('accounts').getList(1, 1, {
+    filter: 'subscription_status="active" || subscription_status="trialing"'
+  })
+  const activeSubscriptions = activeSubsResult.totalItems
+  
+  // Get total revenue (sum all payments)
+  const allPayments = await pb.collection('payments').getFullList<Payment>({
+    filter: 'status="paid" || status="succeeded"'
+  })
+  const totalRevenue = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+  
+  // Get total investigations
+  const researchResult = await pb.collection('research').getList(1, 1)
+  const totalInvestigations = researchResult.totalItems
+  
+  // Get new users this month
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+  const newUsersResult = await pb.collection('users').getList(1, 1, {
+    filter: `created>="${startOfMonth.toISOString()}"`
+  })
+  const newUsersThisMonth = newUsersResult.totalItems
+  
+  // Get investigations this month
+  const investigationsThisMonthResult = await pb.collection('research').getList(1, 1, {
+    filter: `created>="${startOfMonth.toISOString()}"`
+  })
+  const investigationsThisMonth = investigationsThisMonthResult.totalItems
+  
+  // Get pending investigations
+  const pendingResult = await pb.collection('research').getList(1, 1, {
+    filter: 'status="Pending"'
+  })
+  const pendingInvestigations = pendingResult.totalItems
+  
+  // Get failed investigations
+  const failedResult = await pb.collection('research').getList(1, 1, {
+    filter: 'status="Error"'
+  })
+  const failedInvestigations = failedResult.totalItems
+  
+  return {
+    totalUsers,
+    activeSubscriptions,
+    totalRevenue,
+    totalInvestigations,
+    newUsersThisMonth,
+    investigationsThisMonth,
+    pendingInvestigations,
+    failedInvestigations,
+  }
+}
+
+export async function getRevenueOverTime(months: number = 6): Promise<{ month: string; revenue: number }[]> {
+  const data: { month: string; revenue: number }[] = []
+  const now = new Date()
+  
+  for (let i = months - 1; i >= 0; i--) {
+    const startDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
+    
+    const payments = await pb.collection('payments').getFullList<Payment>({
+      filter: `created>="${startDate.toISOString()}" && created<="${endDate.toISOString()}" && (status="paid" || status="succeeded")`
+    })
+    
+    const revenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
+    
+    data.push({
+      month: startDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      revenue: revenue / 100, // Convert cents to dollars
+    })
+  }
+  
+  return data
+}
+
+export async function getNewUsersOverTime(months: number = 6): Promise<{ month: string; users: number }[]> {
+  const data: { month: string; users: number }[] = []
+  const now = new Date()
+  
+  for (let i = months - 1; i >= 0; i--) {
+    const startDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
+    
+    const result = await pb.collection('users').getList(1, 1, {
+      filter: `created>="${startDate.toISOString()}" && created<="${endDate.toISOString()}"`
+    })
+    
+    data.push({
+      month: startDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      users: result.totalItems,
+    })
+  }
+  
+  return data
+}
+
+export async function getRiskDistribution(): Promise<{ name: string; value: number; color: string }[]> {
+  const levels = [
+    { name: 'Low', color: '#22c55e' },
+    { name: 'Medium', color: '#eab308' },
+    { name: 'High', color: '#f97316' },
+    { name: 'Critical', color: '#ef4444' },
+  ]
+  
+  const data: { name: string; value: number; color: string }[] = []
+  
+  for (const level of levels) {
+    const result = await pb.collection('research').getList(1, 1, {
+      filter: `risk_level="${level.name}" && status="Complete"`
+    })
+    data.push({
+      name: level.name,
+      value: result.totalItems,
+      color: level.color,
+    })
+  }
+  
+  return data
+}
+
+export async function getSubscriptionDistribution(): Promise<{ name: string; value: number; color: string }[]> {
+  const plans = [
+    { name: 'Free', filter: 'plan_name="Free" || plan_name="" || plan_name=null', color: '#94a3b8' },
+    { name: 'Basic', filter: 'plan_name="Basic"', color: '#3b82f6' },
+    { name: 'Pro', filter: 'plan_name="Pro"', color: '#8b5cf6' },
+  ]
+  
+  const data: { name: string; value: number; color: string }[] = []
+  
+  for (const plan of plans) {
+    const result = await pb.collection('accounts').getList(1, 1, {
+      filter: plan.filter
+    })
+    data.push({
+      name: plan.name,
+      value: result.totalItems,
+      color: plan.color,
+    })
+  }
+  
+  return data
+}
+
+export async function getRecentUsers(limit: number = 5): Promise<AccountWithUser[]> {
+  const result = await pb.collection('accounts').getList<AccountWithUser>(1, limit, {
+    sort: '-created',
+    expand: 'user',
+  })
+  return result.items
+}
+
+export async function getRecentPayments(limit: number = 5): Promise<PaymentWithAccount[]> {
+  const result = await pb.collection('payments').getList<PaymentWithAccount>(1, limit, {
+    sort: '-created',
+    expand: 'account,account.user',
+  })
+  return result.items
+}
+
+export async function getRecentResearch(limit: number = 5): Promise<ResearchWithAccount[]> {
+  const result = await pb.collection('research').getList<ResearchWithAccount>(1, limit, {
+    sort: '-created',
+    expand: 'account,account.user',
+  })
+  return result.items
+}
 
 // ============================================================================
 // FEEDBACK HELPERS

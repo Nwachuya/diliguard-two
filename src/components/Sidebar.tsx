@@ -151,7 +151,7 @@ export default function Sidebar({ account }: SidebarProps) {
   return (
     <>
       {/* Mobile Trigger */}
-      <div className="lg:hidden fixed top-4 left-4 z-40">
+      <div className="lg:hidden fixed top-4 right-4 z-40">
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
           className="p-2 bg-white border border-gray-200 text-gray-900 rounded-lg shadow-sm"
