@@ -103,7 +103,7 @@ export default function AdminPaymentsPage() {
           startDate = new Date(0)
       }
 
-      if (dateFilter !== 'last_month') {
+      if ((dateFilter as string) !== 'last_month') {
         parts.push(`created>="${startDate.toISOString()}"`)
       }
     }
@@ -418,12 +418,12 @@ export default function AdminPaymentsPage() {
                     <td className="px-6 py-4">
                       <div>
                         <p className="font-medium text-gray-900">
-                          {payment.expand?.account?.expand?.user?.name || 'Unknown'}
+                          {(payment.expand?.account as any)?.expand?.user?.name || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {payment.expand?.account?.expand?.user?.email}
+                          {(payment.expand?.account as any)?.expand?.user?.email}
                         </p>
-                      </div>
+                     </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-semibold text-gray-900">
@@ -528,8 +528,8 @@ export default function AdminPaymentsPage() {
                 <DetailRow
                   icon={User}
                   label="Customer"
-                  value={selectedPayment.expand?.account?.expand?.user?.name || 'Unknown'}
-                  subValue={selectedPayment.expand?.account?.expand?.user?.email}
+                  value={(selectedPayment.expand?.account as any)?.expand?.user?.name || 'Unknown'}
+                  subValue={(selectedPayment.expand?.account as any)?.expand?.user?.email}    
                 />
                 <DetailRow
                   icon={Calendar}

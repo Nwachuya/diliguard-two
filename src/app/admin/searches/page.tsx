@@ -426,10 +426,10 @@ export default function AdminSearchesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-gray-900">
-                        {item.expand?.account?.expand?.user?.name || 'Unknown'}
+                        {(item.expand?.account as any)?.expand?.user?.name || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {item.expand?.account?.expand?.user?.email}
+                        {(item.expand?.account as any)?.expand?.user?.email}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-gray-500">
@@ -562,7 +562,7 @@ export default function AdminSearchesPage() {
 
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <DetailItem icon={User} label="Requested By" value={selectedResearch.expand?.account?.expand?.user?.name || 'Unknown'} />
+                <DetailItem icon={User} label="Requested By" value={(selectedResearch.expand?.account as any)?.expand?.user?.name || 'Unknown'} />
                 <DetailItem icon={Calendar} label="Date" value={formatDateTime(selectedResearch.created)} />
                 {selectedResearch.location && (
                   <DetailItem icon={MapPin} label="Location" value={selectedResearch.location} />

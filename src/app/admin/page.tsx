@@ -313,7 +313,7 @@ export default function AdminDashboardPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `$${v}`} />
                 <Tooltip
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                  formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                 />
                 <Line
@@ -339,7 +339,7 @@ export default function AdminDashboardPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <Tooltip
-                  formatter={(value: number) => [value, 'Users']}
+                  formatter={(value: any) => [value, 'Users']}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                 />
                 <Bar dataKey="users" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
@@ -368,7 +368,7 @@ export default function AdminDashboardPage() {
                     outerRadius={90}
                     paddingAngle={2}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
                     {riskData.map((entry, index) => (
@@ -376,7 +376,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number, name: string) => [value, name]}
+                    formatter={(value: any, name: any) => [value, name]}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                   />
                 </PieChart>
@@ -402,7 +402,7 @@ export default function AdminDashboardPage() {
                     outerRadius={90}
                     paddingAngle={2}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
                     {subscriptionData.map((entry, index) => (
@@ -410,7 +410,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number, name: string) => [value, name]}
+                    formatter={(value: any, name: any) => [value, name]}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                   />
                 </PieChart>
@@ -472,7 +472,7 @@ export default function AdminDashboardPage() {
                 <div key={payment.id} className="p-4 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      {payment.expand?.account?.expand?.user?.name || 'Unknown'}
+                      {(payment.expand?.account as any)?.expand?.user?.name || 'Unknown'}
                     </p>
                     <p className="text-xs text-gray-500">
                       {new Date(payment.created).toLocaleDateString()}
