@@ -3,7 +3,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import pb, { getAccount } from '@/lib/pocketbase'
+import pb, {
+  getAccount,
+  getAdminDashboardStats,
+  getRevenueOverTime,
+  getNewUsersOverTime,
+  getRiskDistribution,
+  getSubscriptionDistribution,
+  getRecentUsers,
+  getRecentPayments,
+  getRecentResearch,
+} from '@/lib/pocketbase'
 import type { AccountWithUser, PaymentWithAccount, ResearchWithAccount } from '@/types'
 import {
   Users,
@@ -18,6 +28,7 @@ import {
   RefreshCw,
   ArrowRight,
   ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react'
 import {
   LineChart,
@@ -32,6 +43,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts'
 
 interface DashboardStats {
@@ -53,7 +65,6 @@ export default function AdminDashboardPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [timeFrame, setTimeFrame] = useState<TimeFrame>(6)
-  const [error, setError] = useState<string | null>(null)
 
   // Data states
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -85,37 +96,41 @@ export default function AdminDashboardPage() {
     checkAccess()
   }, [router])
 
-  // Load dashboard data from API
+  // Load dashboard data
   const loadData = useCallback(async () => {
     setRefreshing(true)
-    setError(null)
-
     try {
-      const response = await fetch(`/api/admin/stats?months=${timeFrame}`, {
-        headers: {
-          'Authorization': `Bearer ${pb.authStore.token}`,
-        },
-      })
+      const [
+        statsData,
+        revenue,
+        users,
+        risk,
+        subs,
+        recUsers,
+        recPayments,
+        recResearch,
+      ] = await Promise.all([
+        getAdminDashboardStats(),
+        getRevenueOverTime(timeFrame),
+        getNewUsersOverTime(timeFrame),
+        getRiskDistribution(),
+        getSubscriptionDistribution(),
+        getRecentUsers(5),
+        getRecentPayments(5),
+        getRecentResearch(5),
+      ])
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to fetch stats')
-      }
-
-      const data = await response.json()
-
-      setStats(data.stats)
-      setRevenueData(data.revenueData)
-      setUsersData(data.usersData)
-      setRiskData(data.riskData)
-      setSubscriptionData(data.subscriptionData)
-      setRecentUsers(data.recentUsers)
-      setRecentPayments(data.recentPayments)
-      setRecentResearch(data.recentResearch)
+      setStats(statsData)
+      setRevenueData(revenue)
+      setUsersData(users)
+      setRiskData(risk)
+      setSubscriptionData(subs)
+      setRecentUsers(recUsers)
+      setRecentPayments(recPayments)
+      setRecentResearch(recResearch)
       setLastUpdated(new Date())
-    } catch (err: any) {
-      console.error('Failed to load dashboard data:', err)
-      setError(err.message)
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error)
     } finally {
       setRefreshing(false)
     }
@@ -164,24 +179,6 @@ export default function AdminDashboardPage() {
       <div className="flex h-[50vh] items-center justify-center text-gray-500">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600 mr-2" />
         Loading Admin Dashboard...
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to load dashboard</h2>
-          <p className="text-gray-500 mb-4">{error}</p>
-          <button
-            onClick={loadData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Try Again
-          </button>
-        </div>
       </div>
     )
   }
@@ -316,10 +313,7 @@ export default function AdminDashboardPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `$${v}`} />
                 <Tooltip
-                  formatter={(value: number | undefined) => [
-                    `$${(value ?? 0).toFixed(2)}`, 
-                    'Revenue'
-                  ]}
+                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                 />
                 <Line
@@ -345,7 +339,7 @@ export default function AdminDashboardPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <Tooltip
-                  formatter={(value: number | undefined) => [value ?? 0, 'Users']}
+                  formatter={(value: number) => [value, 'Users']}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                 />
                 <Bar dataKey="users" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
@@ -440,7 +434,7 @@ export default function AdminDashboardPage() {
             {recentUsers.length === 0 ? (
               <p className="p-4 text-sm text-gray-400 text-center">No users yet</p>
             ) : (
-              recentUsers.map((account: any) => (
+              recentUsers.map((account) => (
                 <div key={account.id} className="p-4 flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold">
                     {account.expand?.user?.name?.[0]?.toUpperCase() || 'U'}
@@ -474,7 +468,7 @@ export default function AdminDashboardPage() {
             {recentPayments.length === 0 ? (
               <p className="p-4 text-sm text-gray-400 text-center">No payments yet</p>
             ) : (
-              recentPayments.map((payment: any) => (
+              recentPayments.map((payment) => (
                 <div key={payment.id} className="p-4 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
@@ -514,7 +508,7 @@ export default function AdminDashboardPage() {
             {recentResearch.length === 0 ? (
               <p className="p-4 text-sm text-gray-400 text-center">No investigations yet</p>
             ) : (
-              recentResearch.map((research: any) => (
+              recentResearch.map((research) => (
                 <div key={research.id} className="p-4 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
@@ -549,14 +543,16 @@ interface StatCardProps {
   isFormatted?: boolean
 }
 
-function StatCard({ icon: Icon, iconBg, value, label, subValue, subIcon: SubIcon, subColor }: StatCardProps) {
+function StatCard({ icon: Icon, iconBg, value, label, subValue, subIcon: SubIcon, subColor, isFormatted }: StatCardProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex items-center gap-4">
       <div className={`p-3 rounded-xl ${iconBg} shrink-0`}>
         <Icon className="h-5 w-5 text-white" />
       </div>
       <div>
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
+        <div className={`text-2xl font-bold text-gray-900 ${isFormatted ? '' : ''}`}>
+          {value}
+        </div>
         <div className="text-xs text-gray-500">{label}</div>
         {subValue && (
           <div className={`text-xs mt-1 flex items-center gap-1 ${subColor || 'text-gray-400'}`}>
